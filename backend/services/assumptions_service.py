@@ -9,7 +9,10 @@ defaultAssumptions = {
     "TheftRate": {
         "name": "Theft risk",
         "value": 50,
-        "format": FORMAT_TYPES["percentage"]    
+        "format": FORMAT_TYPES["percentage"],
+        "min": 0,
+        "max": 100,
+        "temperature": 20 
     },
     "School": {
         "name": "Education level",
@@ -20,8 +23,9 @@ defaultAssumptions = {
         "name": "Annual salary",
         "value": 20000,
         "format": FORMAT_TYPES["currency"],
-        "min": 0,
-        "max": 100000
+        "min": 3000,
+        "max": 100000,
+        "temperature": 60000,
     },
     "Generation": {
         "name": "Generation",
@@ -33,7 +37,8 @@ defaultAssumptions = {
         "value": 70,
         "format": FORMAT_TYPES["weight"],
         "min": 45,
-        "max": 120
+        "max": 120,
+        "temperature": 80
     },
     "CitizenState": {
         "name": "Marital status",
@@ -46,6 +51,7 @@ defaultAssumptions = {
         "format": FORMAT_TYPES["currency"],
         "min": 0,
         "max": 100000,
+        "temperature": 15000
     },
     "FitnessAge": {
         "name": "Fitness age",
@@ -53,13 +59,15 @@ defaultAssumptions = {
         "format": FORMAT_TYPES["years"],
         "min": 18,
         "max": 70,
+        "temperature": 45
     },
     "ScreenTime": {
         "name": "Screen time",
         "value": 3,
         "format": FORMAT_TYPES["hoursPerDay"],
         "min": 0,
-        "max": 12
+        "max": 12,
+        "temperature": 6,
     }
 }
 
@@ -72,6 +80,25 @@ class AssumptionsService:
         if min_val >= max_val:
             return min_val
         return random.randint(min_val, max_val)
+    
+    def weighted_choice(self, education_data):
+        choices = [item["level"] for item in education_data]
+        weights = [item["weight"] for item in education_data]
+        
+        total = sum(weights)
+        r = random.uniform(0, total)
+        upto = 0
+        for choice, weight in zip(choices, weights):
+            if upto + weight >= r:
+                return choice
+            upto += weight
+        return choices[-1]
+    
+    def temperature_randint(self, min_val, max_val, temperature, spread=0.4):
+        standardDeviation = (max_val - min_val) * spread
+        value = int(random.gauss(temperature, standardDeviation))
+        return max(min_val, min(value, max_val))
+
     
     def get_assumptions(self):
         assumptions = copy.deepcopy(defaultAssumptions)
@@ -92,22 +119,27 @@ class AssumptionsService:
         
         generations = copy.deepcopy(GENERATIONS)
         
-        assumptions["School"]["value"] = random.choice(EDUCATION_LEVELS)
-        assumptions["Weight"]["value"] = random.randint(45, 120)
+        assumptions["School"]["value"] = self.weighted_choice(EDUCATION_LEVELS)
+        assumptions["Weight"]["value"] = self.temperature_randint(
+            assumptions["Weight"]["min"], 
+            assumptions["Weight"]["max"], 
+            assumptions["Weight"]["temperature"],
+            spread=0.25
+        )
         assumptions["CitizenState"]["value"] = random.choice(MARITAL_STATUSES)
         assumptions["ScreenTime"]["value"] = random.randint(0, 12)
          
         if (assumptions["School"]["value"] == "Bachelor's degree"):
             maxTheftRisk -= 10
             minDebt += 10000
-            minSalary += 10000
+            minSalary += 15000
             generations.remove("Gen Z")
             generations.remove("Gen alpha")
         elif (assumptions["School"]["value"] == "Master's degree" or
             assumptions["School"]["value"] == "PhD"):
             maxTheftRisk -= 20
             minDebt += 20000
-            minSalary += 30000
+            minSalary += 50000
             generations.remove("Gen Z")
             generations.remove("Gen alpha")
         else:
@@ -136,10 +168,10 @@ class AssumptionsService:
               assumptions["Generation"]["value"] == "Stille generatie"):
             minFitnessAge += 30
         
-        assumptions["Salary"]["value"] = self.safe_randint(minSalary, maxSalary)
-        assumptions["FitnessAge"]["value"] = self.safe_randint(minFitnessAge, maxFitnessAge)
-        assumptions["Debt"]["value"] = self.safe_randint(minDebt, maxDebt)
-        assumptions["TheftRate"]["value"] = self.safe_randint(minTheftRisk, maxTheftRisk)
+        assumptions["Salary"]["value"] = self.temperature_randint(minSalary, maxSalary, assumptions["Salary"]["temperature"], spread=0.8)
+        assumptions["FitnessAge"]["value"] = self.temperature_randint(minFitnessAge, maxFitnessAge, assumptions["FitnessAge"]["temperature"], spread=0.8)
+        assumptions["Debt"]["value"] = self.temperature_randint(minDebt, maxDebt, assumptions["Debt"]["temperature"])
+        assumptions["TheftRate"]["value"] = self.temperature_randint(minTheftRisk, maxTheftRisk, assumptions["TheftRate"]["temperature"])
         
         return assumptions
     

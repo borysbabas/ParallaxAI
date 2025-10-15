@@ -45,6 +45,24 @@ class AssumptionsService {
       throw new Error('Failed to generate assumptions');
     }
   }
+
+  async getRandomAssumptions(): Promise<AssumptionData> {
+    try {
+      const response = await fetch(`${this.baseUrl}/assumptions`, {
+        method: 'GET',
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const assumptions: AssumptionData = await response.json();
+      return assumptions;
+    } catch (error) {
+      console.error('Error getting random assumptions:', error);
+      throw new Error('Failed to get random assumptions');
+    }
+  }
 }
 
 const assumptionsService = new AssumptionsService();
@@ -313,8 +331,21 @@ export const useWebcamService = () => {
     analysisError.value = null
     closeNavbar()
   }
-
-  // Upload file from upload button
+  //askes api for new data for development purposes
+  const reload = async () => {
+    try {
+      isAnalyzing.value = true
+      analysisError.value = null
+      
+      const assumptions = await assumptionsService.getRandomAssumptions()
+      analysisData.value = assumptions
+    } catch (error) {
+      console.error('Reload error:', error)
+      analysisError.value = error instanceof Error ? error.message : 'Reload failed'
+    } finally {
+      isAnalyzing.value = false
+    }
+  }  // Upload file from upload button
   function uploadFile(e: Event) {
     const files = (e.target as HTMLInputElement).files
     const file = files && files.length > 0 ? files[0] : undefined
@@ -371,6 +402,7 @@ export const useWebcamService = () => {
     
     // Helper
     formatField,
+    reload,
     getStringHash,
     getConsistentPercentage,
     getBarColorClass,

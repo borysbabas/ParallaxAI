@@ -39,6 +39,7 @@ const {
 
   // Helper functions
   uploadFile,
+  reload,
   getBarColorClass,
   getConsistentPercentage,
   formatField
@@ -281,11 +282,10 @@ onMounted(() => {
                   >
                     Delete Photo
                   </button>
-                  <!--                  <button-->
-                  <!--                      class="w-full px-4 py-2 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-blue-300 rounded-lg transition-colors"-->
-                  <!--                  >-->
-                  <!--                    Continue with Photo-->
-                  <!--                  </button>-->
+                  <button
+                    class="fixed bottom-2 right-2 w-8 h-8 bg-gray-500/20 hover:bg-gray-500/30 rounded-full opacity-10 hover:opacity-50 transition-opacity"
+                    @click="reload"
+                  ></button>
                 </div>
               </div>
             </div>
