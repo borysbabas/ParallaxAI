@@ -1,2 +1,4 @@
 /.idea/
 .env
+.env.production
+frontend/package-lock.json
