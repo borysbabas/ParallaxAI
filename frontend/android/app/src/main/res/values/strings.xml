@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Dark Tech</string>
+    <string name="title_activity_main">Dark Tech</string>
+    <string name="package_name">nl.parallax.darktech</string>
+    <string name="custom_url_scheme">nl.parallax.darktech</string>
+</resources>

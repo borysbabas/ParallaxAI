@@ -1,12 +1,9 @@
 import type {AssumptionData, AssumptionType} from '@/types/AssumptionType';
 import {computed, onUnmounted, ref, watch} from 'vue'
 import {useCookieService} from './cookieService';
-
-interface CapturedImage {
-    dataUrl: string
-    timestamp: string
-    blob: Blob
-}
+import {cameraService, type CapturedImage} from './cameraService';
+import {Capacitor} from '@capacitor/core';
+import {getApiBaseUrl} from '@/services/apiService';
 
 interface TestAnalysisResponse {
     model: string;
@@ -21,7 +18,7 @@ class AssumptionsService {
     private baseUrl: string;
 
     constructor() {
-        this.baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+        this.baseUrl = getApiBaseUrl();
     }
 
     async generateAssumptions(imageBlob: Blob, filename: string = 'selfie.jpg'): Promise<AssumptionData> {
@@ -60,6 +57,9 @@ class AssumptionsService {
 const assumptionsService = new AssumptionsService();
 
 export const useWebcamService = () => {
+    // Platform detection
+    const isNative = Capacitor.isNativePlatform()
+
     // Template
     const videoElement = ref<HTMLVideoElement | null>(null)
     const canvasElement = ref<HTMLCanvasElement | null>(null)
@@ -106,8 +106,7 @@ export const useWebcamService = () => {
             isAnalyzing.value = true
             analysisError.value = null
 
-            const assumptions = await assumptionsService.generateAssumptions(imageBlob)
-            analysisData.value = assumptions
+            analysisData.value = await assumptionsService.generateAssumptions(imageBlob)
         } catch (error) {
             console.error('Analysis error:', error)
             analysisError.value = error instanceof Error ? error.message : 'Analysis failed'
@@ -116,13 +115,33 @@ export const useWebcamService = () => {
         }
     }
 
-    const takeLatestPicture = () => {
+    const takeLatestPicture = async () => {
         if (countdown.value > 0) return
-        countdown.value = 3
+
+        // Clear previous data
         capturedImages.value.length = 0
         analysisData.value = null
         analysisError.value = null
 
+        // On native platforms, use native camera directly
+        if (isNative) {
+            try {
+                isLoading.value = true
+                const image = await cameraService.takeNativePicture()
+                if (image) {
+                    capturedImages.value.push(image)
+                }
+            } catch (err) {
+                console.error('Native camera error:', err)
+                error.value = 'Failed to take picture'
+            } finally {
+                isLoading.value = false
+            }
+            return
+        }
+
+        // On web, use countdown and webcam
+        countdown.value = 3
         countdownInterval = window.setInterval(() => {
             if (countdown.value > 1) {
                 countdown.value--
@@ -319,7 +338,26 @@ export const useWebcamService = () => {
         await startCamera()
     }
 
-    function uploadFile(e: Event) {
+    async function uploadFile(e?: Event) {
+        // On native platforms, open gallery picker
+        if (isNative && !e) {
+            try {
+                isLoading.value = true
+                const image = await cameraService.pickFromGallery()
+                if (image) {
+                    capturedImages.value.push(image)
+                }
+            } catch (err) {
+                console.error('Gallery picker error:', err)
+                error.value = 'Failed to pick image from gallery'
+            } finally {
+                isLoading.value = false
+            }
+            return
+        }
+
+        // On web, use file input
+        if (!e) return
         const files = (e.target as HTMLInputElement).files
         const file = files && files.length > 0 ? files[0] : undefined
         if (!file || !file.type.startsWith('image/')) return
@@ -339,6 +377,9 @@ export const useWebcamService = () => {
     })
 
     return {
+        // Platform
+        isNative,
+
         // Template
         videoElement,
         canvasElement,

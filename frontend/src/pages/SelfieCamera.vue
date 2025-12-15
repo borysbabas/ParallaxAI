@@ -8,6 +8,9 @@ import TermsButton from '@/components/TermsButton.vue'
 import TermsPopup from '@/components/TermsPopup.vue'
 
 const {
+  // Platform
+  isNative,
+
   // Template refs
   videoElement,
   canvasElement,
@@ -41,9 +44,11 @@ const {
 
 const termsPopup = ref<InstanceType<typeof TermsPopup> | null>(null)
 
-// Auto-start camera when component mounts
+// Auto-start camera when component mounts (only on web)
 onMounted(() => {
-  startCamera()
+  if (!isNative) {
+    startCamera()
+  }
 })
 </script>
 
@@ -81,22 +86,44 @@ onMounted(() => {
               class="relative rounded-2xl sm:rounded-3xl border border-white/15 bg-white/5 p-1.5 sm:p-2 overflow-hidden">
             <div
                 class="relative aspect-[16/9] w-full rounded-xl overflow-hidden bg-black/50 flex items-center justify-center">
-              <video ref="videoElement"
+              <!-- Web camera video (only show on web platform) -->
+              <video v-if="!isNative"
+                     ref="videoElement"
                      :class="['absolute inset-0 w-full h-full object-cover z-0', isStreaming ? '' : 'opacity-50']"
                      autoplay playsinline></video>
 
-              <div v-if="!isStreaming && !isLoading"
+              <!-- Camera controls overlay: Always show on native, only show when not streaming on web -->
+              <div v-if="isNative || (!isStreaming && !isLoading)"
                    class="absolute inset-0 z-10 flex items-center justify-center bg-black/70 rounded-xl p-4">
                 <div class="text-center">
                   <CameraIcon class="h-16 sm:h-20 w-16 sm:w-20 text-white/50 mx-auto mb-3 sm:mb-4"/>
-                  <p class="text-white/70 text-base sm:text-lg">Camera not active</p>
+                  <p class="text-white/70 text-base sm:text-lg">
+                    {{ isNative ? 'Ready to take photo' : 'Camera not active' }}</p>
                   <div class="mt-4 sm:mt-6 flex flex-col gap-2 sm:gap-3">
-                    <button
-                        class="px-6 sm:px-8 py-3 sm:py-4 cursor-pointer bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium text-base sm:text-lg transition-colors min-h-[44px]"
-                        @click="startCamera">Start Camera
-                    </button>
-                    <UploadButton :label="'Choose file instead'" :onChange="uploadFile" accept="image/*"
-                                  class="px-4 sm:px-6 py-3 text-sm sm:text-base min-h-[44px]"/>
+                    <!-- Web platform buttons -->
+                    <template v-if="!isNative">
+                      <button
+                          class="px-6 sm:px-8 py-3 sm:py-4 cursor-pointer bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium text-base sm:text-lg transition-colors min-h-[44px]"
+                          @click="startCamera">Start Camera
+                      </button>
+                      <UploadButton
+                          :label="'Choose file instead'"
+                          :onChange="uploadFile"
+                          accept="image/*"
+                          class="px-4 sm:px-6 py-3 text-sm sm:text-base min-h-[44px]"/>
+                    </template>
+
+                    <!-- Native platform buttons -->
+                    <template v-if="isNative">
+                      <button
+                          class="px-6 sm:px-8 py-3 sm:py-4 cursor-pointer bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium text-base sm:text-lg transition-colors min-h-[44px]"
+                          @click="takeLatestPicture">Take Photo
+                      </button>
+                      <button
+                          class="px-4 sm:px-6 py-3 cursor-pointer bg-white/10 hover:bg-white/20 border border-white/20 text-white rounded-lg font-medium text-sm sm:text-base transition-colors min-h-[44px]"
+                          @click="uploadFile()">Choose from Gallery
+                      </button>
+                    </template>
                   </div>
                 </div>
               </div>
