@@ -11,11 +11,12 @@ app = FastAPI()
 
 origins = [
     "http://localhost:3000",
+    "http://localhost:5173",  # Vite default port
     "https://parallax-darktech.nl",
     "https://www.parallax-darktech.nl",
     "capacitor://localhost",  # Capacitor iOS
+    "ionic://localhost",  # Capacitor iOS alternative
     "http://localhost",  # Capacitor Android
-    "ionic://localhost",  # Fallback
 ]
 
 app.add_middleware(

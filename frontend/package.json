@@ -12,8 +12,11 @@
     "cap:sync": "npm run build && npx cap sync",
     "cap:sync:dev": "npm run build-development && npx cap sync",
     "cap:open:android": "npx cap open android",
+    "cap:open:ios": "npx cap open ios",
     "cap:run:android": "npm run cap:sync && npx cap run android",
     "cap:run:android:live": "npx cap run android --live-reload --host=0.0.0.0",
+    "cap:run:ios": "npm run cap:sync && npx cap run ios",
+    "cap:run:ios:live": "npx cap run ios --live-reload --host=0.0.0.0",
     "android:deploy": "powershell -ExecutionPolicy Bypass -File ./deploy-android.ps1"
   },
   "dependencies": {
@@ -21,6 +24,7 @@
     "@capacitor/camera": "^8.0.0",
     "@capacitor/cli": "^8.0.0",
     "@capacitor/core": "^8.0.0",
+    "@capacitor/ios": "^8.0.0",
     "@capacitor/splash-screen": "^8.0.0",
     "@capacitor/status-bar": "^8.0.0",
     "@heroicons/vue": "^2.2.0",

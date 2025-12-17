@@ -29,6 +29,8 @@ export class CameraService {
      */
     async takeNativePicture(): Promise<CapturedImage | null> {
         try {
+            console.log('Requesting camera access...');
+
             const image = await Camera.getPhoto({
                 quality: 90,
                 allowEditing: false,
@@ -38,21 +40,32 @@ export class CameraService {
                 saveToGallery: false,
             });
 
+            console.log('Camera photo received:', image.format);
+
             if (!image.dataUrl) {
-                throw new Error('No image data received');
+                throw new Error('No image data received from camera');
             }
 
             // Convert dataUrl to blob
             const blob = await this.dataUrlToBlob(image.dataUrl);
+            console.log('Image converted to blob:', blob.size, 'bytes');
 
             return {
                 dataUrl: image.dataUrl,
                 timestamp: new Date().toLocaleString(),
                 blob
             };
-        } catch (error) {
+        } catch (error: any) {
             console.error('Native camera error:', error);
-            throw error;
+
+            // Provide user-friendly error messages
+            if (error.message && error.message.includes('User cancelled')) {
+                throw new Error('Camera was cancelled');
+            } else if (error.message && error.message.includes('permission')) {
+                throw new Error('Camera permission denied. Please enable camera access in Settings.');
+            } else {
+                throw new Error(error.message || 'Failed to access camera. Please check permissions in Settings.');
+            }
         }
     }
 
@@ -61,6 +74,8 @@ export class CameraService {
      */
     async pickFromGallery(): Promise<CapturedImage | null> {
         try {
+            console.log('Opening photo gallery...');
+
             const image = await Camera.getPhoto({
                 quality: 90,
                 allowEditing: false,
@@ -69,20 +84,31 @@ export class CameraService {
                 correctOrientation: true,
             });
 
+            console.log('Gallery photo selected:', image.format);
+
             if (!image.dataUrl) {
-                throw new Error('No image data received');
+                throw new Error('No image data received from gallery');
             }
 
             const blob = await this.dataUrlToBlob(image.dataUrl);
+            console.log('Gallery image converted to blob:', blob.size, 'bytes');
 
             return {
                 dataUrl: image.dataUrl,
                 timestamp: new Date().toLocaleString(),
                 blob
             };
-        } catch (error) {
+        } catch (error: any) {
             console.error('Gallery picker error:', error);
-            throw error;
+
+            // Provide user-friendly error messages
+            if (error.message && error.message.includes('User cancelled')) {
+                throw new Error('Photo selection was cancelled');
+            } else if (error.message && error.message.includes('permission')) {
+                throw new Error('Photo library permission denied. Please enable access in Settings.');
+            } else {
+                throw new Error(error.message || 'Failed to access photo library. Please check permissions in Settings.');
+            }
         }
     }
 

@@ -19,24 +19,44 @@ class AssumptionsService {
 
     constructor() {
         this.baseUrl = getApiBaseUrl();
+        console.log('API Base URL:', this.baseUrl);
     }
 
     async generateAssumptions(imageBlob: Blob, filename: string = 'selfie.jpg'): Promise<AssumptionData> {
         try {
+            console.log('Generating assumptions for image:', imageBlob.size, 'bytes');
+            console.log('Using API endpoint:', `${this.baseUrl}/assumptions/generate?ai_model=gemini`);
+
             const formData = new FormData();
             formData.append('image', imageBlob, filename);
 
+            console.log('Sending fetch request...');
             const response = await fetch(`${this.baseUrl}/assumptions/generate?ai_model=gemini`, {
                 method: 'POST',
                 body: formData,
+            }).catch((fetchError) => {
+                console.error('Fetch failed:', fetchError);
+                console.error('Error type:', fetchError.constructor.name);
+                console.error('Error message:', fetchError.message);
+                console.error('Error stack:', fetchError.stack);
+                throw new Error(`Network error: Cannot connect to ${this.baseUrl}. Error: ${fetchError.message}`);
             });
 
+            console.log('Response received:', response.status, response.statusText);
+
             if (!response.ok) {
-                const errorDetail = (await response.json()).detail;
-                throw new Error(`${errorDetail}`);
+                const errorText = await response.text();
+                console.error('Error response:', errorText);
+                try {
+                    const errorJson = JSON.parse(errorText);
+                    throw new Error(errorJson.detail || `Server error: ${response.status}`);
+                } catch (parseError) {
+                    throw new Error(`Server error (${response.status}): ${errorText || response.statusText}`);
+                }
             }
 
             const data: TestAnalysisResponse = await response.json();
+            console.log('Analysis response received:', data.model, data.version);
 
             if (!data.assumptions) {
                 return null as unknown as AssumptionData;
@@ -48,8 +68,16 @@ class AssumptionsService {
 
             return data.assumptions;
         } catch (error) {
-            console.error('Error generating assumptions:', error);
-            throw new Error(error instanceof Error ? error.message : 'Failed to generate assumptions');
+            console.error('Error generating assumptions - full error:', error);
+            console.error('Error type:', error?.constructor?.name);
+            console.error('Error message:', (error as any)?.message);
+            console.error('Error stringified:', JSON.stringify(error));
+
+            if (error instanceof Error) {
+                throw error;
+            }
+
+            throw new Error('Failed to generate assumptions: Unknown error');
         }
     }
 }
@@ -127,13 +155,25 @@ export const useWebcamService = () => {
         if (isNative) {
             try {
                 isLoading.value = true
+                error.value = null
+
+                console.log('Opening native camera...')
                 const image = await cameraService.takeNativePicture()
+
                 if (image) {
+                    console.log('Image captured successfully')
                     capturedImages.value.push(image)
+                    error.value = null
+                } else {
+                    console.log('No image returned from camera')
+                    error.value = 'No image was captured'
                 }
             } catch (err) {
                 console.error('Native camera error:', err)
-                error.value = 'Failed to take picture'
+                error.value = err instanceof Error ? err.message : 'Failed to take picture. Please check camera permissions.'
+
+                // Show error in analysis panel as well
+                analysisError.value = error.value
             } finally {
                 isLoading.value = false
             }
@@ -343,13 +383,25 @@ export const useWebcamService = () => {
         if (isNative && !e) {
             try {
                 isLoading.value = true
+                error.value = null
+                analysisError.value = null
+
+                console.log('Opening gallery picker...')
                 const image = await cameraService.pickFromGallery()
+
                 if (image) {
+                    console.log('Image selected from gallery')
                     capturedImages.value.push(image)
+                    error.value = null
+                } else {
+                    console.log('No image selected from gallery')
                 }
             } catch (err) {
                 console.error('Gallery picker error:', err)
-                error.value = 'Failed to pick image from gallery'
+                error.value = err instanceof Error ? err.message : 'Failed to pick image from gallery. Please check photo library permissions.'
+
+                // Show error in analysis panel as well
+                analysisError.value = error.value
             } finally {
                 isLoading.value = false
             }

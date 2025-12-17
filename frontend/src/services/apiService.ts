@@ -4,20 +4,37 @@ import {Capacitor} from '@capacitor/core';
  * Get the correct API base URL based on platform and environment
  */
 export function getApiBaseUrl(): string {
+    // Check if we have a configured API URL in env
+    const configuredUrl = import.meta.env.VITE_API_URL;
+
     // On native platforms in development
     if (Capacitor.isNativePlatform()) {
-        // Check if we have a configured API URL in env
-        const configuredUrl = import.meta.env.VITE_API_URL;
         if (configuredUrl) {
+            console.log(`[API] Using configured URL for native platform: ${configuredUrl}`);
             return configuredUrl;
         }
 
-        // Default to production URL for mobile
+        // WARNING: localhost doesn't work on physical iOS devices
+        // You need to use your Mac's local IP address (e.g., http://192.168.x.x:8000)
+        // Set VITE_API_URL in .env.local with your Mac's IP
+        const platform = Capacitor.getPlatform();
+        console.warn(`[API] No VITE_API_URL configured for ${platform}. Using fallback which may not work on physical devices.`);
+
+        if (platform === 'ios') {
+            // Note: This only works on iOS simulator, not physical devices
+            return 'http://localhost:8000';
+        } else if (platform === 'android') {
+            // Special IP for Android emulator to access host machine
+            return 'http://10.0.2.2:8000';
+        }
+
+        // Default to production URL for physical devices
+        console.log('[API] Falling back to production URL');
         return 'https://parallax-darktech.nl';
     }
 
     // On web platform
-    return import.meta.env.VITE_API_URL || 'http://localhost:8000';
+    return configuredUrl || 'http://localhost:8000';
 }
 
 /**

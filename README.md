@@ -1,5 +1,31 @@
 # Dark Tech - Project 2025
 
+## 🚀 Quick Start
+
+### Running iOS App with Backend (macOS)
+
+**Step 1:** Start the backend server (Terminal 1)
+
+```bash
+./start-backend.sh
+```
+
+**Step 2:** Build and run iOS app (Terminal 2)
+
+```bash
+./start-ios.sh
+```
+
+**Step 3:** In Xcode, select a simulator and press Play (▶️)
+
+📖 **Full guide:** [Running with Backend](/docs/RUNNING-WITH-BACKEND.md)
+
+### Prerequisites
+
+- ✅ Node.js 22+ (using fnm: `fnm install 22`)
+- ✅ Python 3.11+
+- ✅ Xcode 14+ (for iOS)
+
 ## Installation
 
 [Installation guide](/docs/installation.md)

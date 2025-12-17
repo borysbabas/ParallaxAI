@@ -6,7 +6,8 @@ const config: CapacitorConfig = {
     webDir: 'dist',
     plugins: {
         Camera: {
-            presentationStyle: 'fullscreen'
+            presentationStyle: 'fullscreen',
+            permissions: ['camera', 'photos']
         },
         SplashScreen: {
             launchShowDuration: 2000,

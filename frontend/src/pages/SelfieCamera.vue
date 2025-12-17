@@ -95,10 +95,16 @@ onMounted(() => {
               <!-- Camera controls overlay: Always show on native, only show when not streaming on web -->
               <div v-if="isNative || (!isStreaming && !isLoading)"
                    class="absolute inset-0 z-10 flex items-center justify-center bg-black/70 rounded-xl p-4">
-                <div class="text-center">
+                <div class="text-center max-w-md">
                   <CameraIcon class="h-16 sm:h-20 w-16 sm:w-20 text-white/50 mx-auto mb-3 sm:mb-4"/>
                   <p class="text-white/70 text-base sm:text-lg">
                     {{ isNative ? 'Ready to take photo' : 'Camera not active' }}</p>
+
+                  <!-- Error message display -->
+                  <div v-if="analysisError" class="mt-3 p-3 bg-red-500/20 border border-red-500/30 rounded-lg">
+                    <p class="text-red-300 text-sm">{{ analysisError }}</p>
+                  </div>
+
                   <div class="mt-4 sm:mt-6 flex flex-col gap-2 sm:gap-3">
                     <!-- Web platform buttons -->
                     <template v-if="!isNative">
@@ -121,7 +127,7 @@ onMounted(() => {
                       </button>
                       <button
                           class="px-4 sm:px-6 py-3 cursor-pointer bg-white/10 hover:bg-white/20 border border-white/20 text-white rounded-lg font-medium text-sm sm:text-base transition-colors min-h-[44px]"
-                          @click="uploadFile()">Choose from Gallery
+                          @click="uploadFile">Choose from Gallery
                       </button>
                     </template>
                   </div>
