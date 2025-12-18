@@ -15,10 +15,9 @@ interface TestAnalysisResponse {
 const {setCookie} = useCookieService();
 
 class AssumptionsService {
-    private baseUrl: string;
+    private baseUrl: string = getApiBaseUrl();
 
     constructor() {
-        this.baseUrl = getApiBaseUrl();
         console.log('API Base URL:', this.baseUrl);
     }
 
