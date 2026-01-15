@@ -1,8 +1,29 @@
-# Dark Tech - Project 2025
+# ParallaxAI
+
+![ParallaxAI Thumbnail](frontend/public/img/thumbnail.png)
+
+## Description
+
+ParallaxAI is an interactive AI-powered photo booth experience designed to raise awareness about AI reliability and
+bias. The application captures user photos and generates assumptions based on facial analysis, demonstrating how AI
+systems can make unfounded judgments. This project aims to make people think critically about the trustworthiness of
+AI-generated information and the inherent limitations and biases in AI systems.
+
+ParallaxAI combines a FastAPI backend with AI capabilities (using Gemini, Claude, and OpenAI) and
+a modern frontend interface to create an engaging educational experience about the ethical implications of AI
+technology.
 
 ## Installation
 
 [Installation guide](/docs/installation.md)
+
+## Documentation
+
+- [Frontend](/docs/frontend/index.md) - Vue 3 application overview
+- [AI Models](/docs/ai/index.md) - AI model integration and comparison
+- [Database ERD](/docs/database/database_erd.md) - Database structure
+- [Society 5.0](/docs/society%205/index.md) - Research and analysis
+- [Sprint Reviews](/docs/sprint%201/) - Sprint documentation
 
 ## Getting started
 

@@ -1,5 +1,12 @@
 export interface AssumptionData {
-    [key: string]: AssumptionType;
+    thought: string;
+    assumptions: Record<string, AssumptionType>;
+}
+
+export interface ComparisonData {
+    claude?: AssumptionData;
+    openai?: AssumptionData;
+    gemini?: AssumptionData;
 }
 
 export type AssumptionType = {
