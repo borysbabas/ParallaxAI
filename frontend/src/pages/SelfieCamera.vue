@@ -1,7 +1,8 @@
 <script lang="ts" setup>
-import {onMounted, ref} from 'vue'
+import {onMounted, onUnmounted, ref} from 'vue'
 import {useWebcamService} from '@/services/webcamService'
-import {CameraIcon} from '@heroicons/vue/24/outline'
+import {useFaceDetection} from '@/composables/useFaceDetection'
+import {CameraIcon, CheckCircleIcon} from '@heroicons/vue/24/outline'
 import UploadButton from '@/components/UploadButton.vue'
 import AssumptionsPanel from '@/components/AssumptionsPanel.vue'
 import TermsButton from '@/components/TermsButton.vue'
@@ -41,16 +42,148 @@ const {
 
 const termsPopup = ref<InstanceType<typeof TermsPopup> | null>(null)
 
-// Auto-start camera when component mounts
-onMounted(() => {
+// Face detection
+const {
+  faceDetected,
+  faceBounds,
+  isModelLoading,
+  isInitializing,
+  loadModel
+} = useFaceDetection(videoElement, isStreaming)
+
+// Notification state: show when sessionStorage.comparison_data transitions from empty->present
+const showComparisonNotification = ref(false)
+let _pollInterval: number | null = null
+let _hideTimeout: number | null = null
+let _lastSeenComparison: string | null = null
+let _lastSeenCompletedAt: number | null = null
+let _mountedAt: number = Date.now()
+
+function checkSessionComparison() {
+  try {
+    const raw = sessionStorage.getItem('comparison_data')
+
+    if (!raw) {
+      _lastSeenComparison = null
+      _lastSeenCompletedAt = null
+      return
+    }
+
+    if (raw === _lastSeenComparison) return
+
+    let parsed: any = null
+    try {
+      parsed = JSON.parse(raw)
+    } catch (e) {
+      console.warn('comparison_data in sessionStorage is not valid JSON yet', e)
+      return
+    }
+
+    const completedAt = parsed && typeof parsed.__comparison_completed_at === 'number' ? parsed.__comparison_completed_at : null
+
+    if (completedAt == null || completedAt <= _mountedAt) {
+      return
+    }
+
+    if (_lastSeenCompletedAt != null && completedAt <= _lastSeenCompletedAt) return
+
+    const requiredKeys = ['gemini', 'claude', 'openai']
+    const hasAllKeys = requiredKeys.every(k => {
+      if (!parsed || typeof parsed !== 'object') return false
+      const v = parsed[k]
+      if (v == null) return false
+
+      if (v && typeof v === 'object' && Array.isArray((v as any).assumptions)) {
+        return (v as any).assumptions.length > 0
+      }
+
+      if (typeof v === 'object') return Object.keys(v).length > 0
+
+      return Boolean(v)
+    })
+
+    if (hasAllKeys) {
+      _lastSeenComparison = raw
+      _lastSeenCompletedAt = completedAt
+      showComparisonNotification.value = true
+      if (_hideTimeout) {
+        clearTimeout(_hideTimeout)
+      }
+      _hideTimeout = window.setTimeout(() => {
+        showComparisonNotification.value = false
+        _hideTimeout = null
+      }, 5000)
+    } else {
+    }
+  } catch (e) {
+    console.error('Error reading comparison_data from sessionStorage', e)
+  }
+}
+
+onMounted(async () => {
+  _mountedAt = Date.now()
+  await loadModel()
   startCamera()
+
+  checkSessionComparison()
+  _pollInterval = window.setInterval(checkSessionComparison, 1000)
+})
+
+onUnmounted(() => {
+  if (_pollInterval) {
+    clearInterval(_pollInterval);
+    _pollInterval = null
+  }
+  if (_hideTimeout) {
+    clearTimeout(_hideTimeout);
+    _hideTimeout = null
+  }
 })
 </script>
 
 <template>
-  <main class="relative overflow-hidden bg-black text-white min-h-screen">
-
+  <main class="relative overflow-hidden bg-black text-white h-screen">
+    
     <TermsPopup ref="termsPopup"/>
+
+    <Transition
+        enter-active-class="transition-all duration-300 ease-out"
+        enter-from-class="translate-x-full opacity-0"
+        enter-to-class="translate-x-0 opacity-100"
+        leave-active-class="transition-all duration-200 ease-in"
+        leave-from-class="translate-x-0 opacity-100"
+        leave-to-class="translate-x-full opacity-0"
+    >
+      <div
+          v-if="showComparisonNotification"
+          class="fixed top-4 right-4 z-50 max-w-sm"
+      >
+        <div
+            class="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg shadow-2xl p-4 border border-indigo-400/50 backdrop-blur-sm">
+          <div class="flex items-start gap-3">
+            <div class="flex-shrink-0">
+              <CheckCircleIcon class="w-6 h-6 text-green-300"/>
+            </div>
+            <div class="flex-1">
+              <h4 class="font-semibold text-white text-sm mb-1">
+                AI Comparison Ready!
+              </h4>
+              <p class="text-indigo-100 text-xs">
+                All 3 AI models have completed their analysis
+              </p>
+            </div>
+            <button
+                class="flex-shrink-0 text-white/70 hover:text-white transition-colors"
+                @click="showComparisonNotification = false"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
 
     <div class="pointer-events-none absolute inset-0 opacity-80">
       <div
@@ -62,9 +195,7 @@ onMounted(() => {
     </div>
 
     <div class="relative z-10 px-4 sm:px-6 py-4 sm:py-8 mx-auto" style="--panel-w:28rem;">
-      <!-- Main row: left = title + live camera (always visible), right = result + assumptions (appears after capture) -->
       <div class="flex flex-col md:flex-row items-start justify-center gap-4 md:gap-0">
-        <!-- Left column: title + live camera -->
         <div
             :class="['left-column transition-transform duration-500 ease-in-out w-full md:w-auto', latestImage ? 'slide-left' : '']"
             class="min-w-full md:min-w-[320px]"
@@ -82,8 +213,35 @@ onMounted(() => {
             <div
                 class="relative aspect-[16/9] w-full rounded-xl overflow-hidden bg-black/50 flex items-center justify-center">
               <video ref="videoElement"
-                     :class="['absolute inset-0 w-full h-full object-cover z-0', isStreaming ? '' : 'opacity-50']"
+                     :class="['camera-video', isStreaming ? '' : 'opacity-50']"
                      autoplay playsinline></video>
+
+              <div v-if="(isModelLoading || isInitializing) && isStreaming"
+                   class="absolute inset-0 z-10 pointer-events-none flex items-center justify-center">
+                <div class="face-detection-loading">
+                  <div class="loading-text">
+                    <span class="loading-dots">{{ isModelLoading ? 'Loading AI Model' : 'Preparing Detection' }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div v-if="faceDetected && isStreaming && !isModelLoading && !isInitializing"
+                   class="absolute inset-0 z-10 pointer-events-none">
+                <div v-for="face in faceBounds"
+                     :key="face.index"
+                     :style="{
+                       left: face.x + 'px',
+                       top: face.y + 'px',
+                       width: face.width + 'px',
+                       height: face.height + 'px'
+                     }"
+                     class="face-box face-box-appear">
+
+                  <div class="face-info">
+                    <div class="info-text">FACE {{ face.index + 1 }}</div>
+                  </div>
+                </div>
+              </div>
 
               <div v-if="!isStreaming && !isLoading"
                    class="absolute inset-0 z-10 flex items-center justify-center bg-black/70 rounded-xl p-4">
@@ -127,7 +285,6 @@ onMounted(() => {
           </div>
         </div>
 
-        <!-- Right column: small captured image + assumptions -->
         <div :class="latestImage ? 'show' : 'hidden'"
              class="right-column w-full md:w-150 transition-all duration-500 ease-in-out"
              style="--panel-w:28rem;">
@@ -202,6 +359,122 @@ onMounted(() => {
   pointer-events: none;
 }
 
+.face-box {
+  position: absolute;
+  border: 1px solid rgba(0, 200, 255, 0.5);
+  box-shadow: inset 0 0 8px rgba(0, 200, 255, 0.1),
+  0 0 8px rgba(0, 200, 255, 0.2);
+  animation: pulse-border 3s ease-in-out infinite;
+}
+
+.face-box-appear {
+  animation: materialize 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards,
+  pulse-border 3s ease-in-out 0.6s infinite;
+}
+
+@keyframes materialize {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+    border-color: rgba(0, 200, 255, 0);
+    box-shadow: inset 0 0 0 rgba(0, 200, 255, 0),
+    0 0 0 rgba(0, 200, 255, 0);
+  }
+  40% {
+    opacity: 0.5;
+    transform: scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    border-color: rgba(0, 200, 255, 0.5);
+    box-shadow: inset 0 0 8px rgba(0, 200, 255, 0.1),
+    0 0 8px rgba(0, 200, 255, 0.2);
+  }
+}
+
+@keyframes pulse-border {
+  0%, 100% {
+    border-color: rgba(0, 200, 255, 0.5);
+    box-shadow: inset 0 0 8px rgba(0, 200, 255, 0.1),
+    0 0 8px rgba(0, 200, 255, 0.2);
+  }
+  50% {
+    border-color: rgba(0, 200, 255, 0.7);
+    box-shadow: inset 0 0 12px rgba(0, 200, 255, 0.15),
+    0 0 12px rgba(0, 200, 255, 0.3);
+  }
+}
+
+.face-info {
+  position: absolute;
+  top: -26px;
+  left: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(2px);
+  padding: 3px 10px;
+  border: 1px solid rgba(0, 200, 255, 0.4);
+  border-radius: 3px;
+  font-family: 'Courier New', monospace;
+  font-size: 9px;
+  color: rgba(0, 200, 255, 0.9);
+  box-shadow: 0 0 4px rgba(0, 200, 255, 0.2);
+  white-space: nowrap;
+  opacity: 0;
+  animation: info-appear 0.4s ease-out 0.5s forwards;
+}
+
+@keyframes info-appear {
+  0% {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.info-text {
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+
+.face-detection-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.loading-text {
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  color: rgba(0, 200, 255, 0.9);
+  text-shadow: 0 0 10px rgba(0, 200, 255, 0.5);
+  letter-spacing: 1px;
+}
+
+.loading-dots::after {
+  content: '';
+  animation: dots 1.5s steps(4, end) infinite;
+}
+
+@keyframes dots {
+  0%, 20% {
+    content: '';
+  }
+  40% {
+    content: '.';
+  }
+  60% {
+    content: '..';
+  }
+  80%, 100% {
+    content: '...';
+  }
+}
+
 @media (max-width: 768px) {
   .left-column {
     transform: none !important;
@@ -212,6 +485,15 @@ onMounted(() => {
     opacity: 1 !important;
     pointer-events: auto !important;
     transition-delay: 0ms !important;
+  }
+
+  .face-info {
+    font-size: 9px;
+    padding: 3px 8px;
+  }
+
+  .loading-text {
+    font-size: 10px;
   }
 }
 </style>
