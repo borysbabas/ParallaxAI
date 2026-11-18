@@ -1,153 +1,75 @@
 # ParallaxAI
 
-![ParallaxAI Thumbnail](frontend/public/img/thumbnail.png)
+![ParallaxAI](frontend/public/img/thumbnail.png)
 
-## Description
+An AI photo booth about how much AI makes up. You step into the booth, it takes your picture, and an AI model guesses
+things about you from your face alone: age, height, weight, salary, IQ, political opinion, religion and more. The
+guesses are confident and unfounded, which is the point: the project wants people to think twice before trusting
+what an AI says about a person. Afterwards a QR code leads to a short form about how the results felt. A Dark Tech
+project at the HvA (semester 1, 2025–2026), comparing Claude, Gemini and GPT models.
 
-ParallaxAI is an interactive AI-powered photo booth experience designed to raise awareness about AI reliability and
-bias. The application captures user photos and generates assumptions based on facial analysis, demonstrating how AI
-systems can make unfounded judgments. This project aims to make people think critically about the trustworthiness of
-AI-generated information and the inherent limitations and biases in AI systems.
+## Stack
 
-ParallaxAI combines a FastAPI backend with AI capabilities (using Gemini, Claude, and OpenAI) and
-a modern frontend interface to create an engaging educational experience about the ethical implications of AI
-technology.
-
-## Installation
-
-[Installation guide](/docs/installation.md)
-
-## Documentation
-
-- [Frontend](/docs/frontend/index.md) - Vue 3 application overview
-- [AI Models](/docs/ai/index.md) - AI model integration and comparison
-- [Database ERD](/docs/database/database_erd.md) - Database structure
-- [Society 5.0](/docs/society%205/index.md) - Research and analysis
-- [Sprint Reviews](/docs/sprint%201/) - Sprint documentation
+| | |
+|---|---|
+| Frontend | Vue 3, TypeScript, Vue Router, Tailwind CSS 4, Vite |
+| Face detection | TensorFlow.js with BlazeFace, in the browser |
+| Charts | Chart.js, on the dashboard |
+| QR codes | `qrcode.vue`, linking the booth to the form |
+| Backend | FastAPI on Uvicorn, Python |
+| AI | Anthropic, Google Gemini and OpenAI SDKs |
+| Data | MariaDB; JWT (`python-jose`) and bcrypt for sign-in and form links |
+| Hosting | Docker Compose: backend on port 8000, frontend on 3000 |
 
 ## Getting started
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
-
-Already a pro? Just edit this README.md and make it your own. Want to make it
-easy? [Use the template at the bottom](#editing-this-readme)!
-
-## Add your files
-
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file)
-  or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or
-  push an existing Git repository with the following command:
-
-```
-cd existing_repo
-git remote add origin https://gitlab.fdmci.hva.nl/studio/dark-tech/templates/dark-tech-project-2025.git
-git branch -M main
-git push -uf origin main
+```bash
+cd backend
+pip install -r requirements.txt
+uvicorn main:app --reload        # http://localhost:8000
 ```
 
-## Integrate with your tools
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-- [ ] [Set up project integrations](https://gitlab.fdmci.hva.nl/studio/dark-tech/templates/dark-tech-project-2025/-/settings/integrations)
+The backend reads `GEMINI_API_KEY`, `CLAUDE_API_KEY`, `OPENAI_API_KEY` and the `DB_*` settings from a `.env` file in
+`backend/`. The full guide is in [docs/installation.md](docs/installation.md). `docker-compose.yml` has a production and
+a development pair of containers.
 
-## Collaborate with your team
+## Pages
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+| Route | |
+|---|---|
+| `/` | The selfie camera with face detection, and the assumptions next to your photo |
+| `/booth` | The version for the physical booth, with the QR code to the form |
+| `/form` | The follow-up questions, opened with a token so nobody can fill in someone else's |
+| `/login`, `/dashboard` | Sign-in for the team, and charts of the assumptions the models made |
+| `/terms-of-service` | Terms of service |
 
-## Test and Deploy
+## Documentation
 
-Use the built-in continuous integration in GitLab.
+- [Frontend](docs/frontend/index.md): the Vue application
+- [AI models](docs/ai/index.md): integration, return format and the model comparison
+- [Database ERD](docs/database/database_erd.md)
+- [Form](docs/form/index.md) and [login and JWT](docs/login%20and%20jwt/)
+- [The booth](docs/booth/index.md): sketches and dimensions of the physical booth
+- [Society 5.0](docs/society%205/index.md): research and analysis
+- [Advice report](docs/adviesrapport.md) and the sprint reviews in `docs/sprint 1` to `docs/sprint 4`
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+## Project structure
 
-***
-
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to
-structure it however you want - this is just a starting point!). Thanks
-to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are
-suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long
-is better than too short. If you think your README is too long, consider utilizing another form of documentation rather
-than cutting out information.
-
-## Name
-
-Choose a self-explaining name for your project.
-
-## Description
-
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be
-unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your
-project, this is a good place to list differentiating factors.
-
-## Badges
-
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the
-project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see
-GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew.
-However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing
-specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a
-specific context like a particular programming language version or operating system or has dependencies that have to be
-installed manually, also add a Requirements subsection.
-
-## Usage
-
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of
-usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably
-include in the README.
-
-## Support
-
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address,
-etc.
-
-## Roadmap
-
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started.
-Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps
-explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce
-the likelihood that the changes inadvertently break something. Having instructions for running tests is especially
-helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-
-Show your appreciation to those who have contributed to the project.
-
-## License
-
-For open source projects, say how it is licensed.
-
-## Project status
-
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has
-slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or
-owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+| Path | |
+|---|---|
+| `frontend/src/pages/` | Selfie camera, photo booth, form, login, dashboard and terms |
+| `frontend/src/components/` | Assumption panels, form questions, upload and terms |
+| `frontend/src/composables/useFaceDetection.ts` | BlazeFace in the browser |
+| `frontend/src/services/` | API calls, webcam, cookies and the upload store |
+| `backend/main.py` | FastAPI app and its routers |
+| `backend/controllers/`, `backend/services/` | Assumptions, auth, form, database and status |
+| `backend/clients/` | Claude, Gemini and OpenAI clients |
+| `backend/constants/prompt.py` | The prompt every model gets |
+| `backend/db/create_tables.sql` | Database schema |
+| `docs/` | Documentation, research and sprint reviews |
